@@ -1,0 +1,20 @@
+{
+  "type": "panel",
+  "name": "Network Traffic Map",
+  "id": "hnakamur-networktrafficmap-panel",
+  "state": "alpha",
+
+  "dataFormats": ["time_series"],
+
+  "info": {
+    "description": "Network Traffic Map Panel for Grafana",
+    "author": {
+      "name": "NAKAMURA Hiroaki",
+      "url": "https://github.com/hnakamur"
+    },
+    "logos": {
+      "small": "img/icn-networktrafficmap-panel.svg",
+      "large": "img/icn-networktrafficmap-panel.svg"
+    }
+  }
+}

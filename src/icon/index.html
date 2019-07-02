@@ -1,0 +1,403 @@
+<!DOCTYPE>
+
+<html>
+
+  <head>
+    <title>cytoscape-svg.js demo</title>
+
+    <meta charset=utf-8 />
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+
+    <script src="cytoscape.min.js"></script>
+    <script src="FileSaver.min.js"></script>
+
+    <!-- for testing with local version of cytoscape.js -->
+    <!--<script src="../cytoscape.js/build/cytoscape.js"></script>-->
+
+    <script src="cytoscape-svg.js"></script>
+
+    <style>
+      body {
+        font-family: helvetica neue, helvetica, liberation sans, arial, sans-serif;
+        font-size: 14px;
+      }
+
+      #cy {
+        position: absolute;
+        left: 0;
+        top: 80px;
+        bottom: 0;
+        right: 0;
+        z-index: 999;
+      }
+
+      h1 {
+        opacity: 0.5;
+        font-size: 1em;
+        font-weight: bold;
+      }
+    </style>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function(){
+
+let exports = {};
+
+(function (GrafanaThemeType) {
+    GrafanaThemeType["Light"] = "light";
+    GrafanaThemeType["Dark"] = "dark";
+})(exports.GrafanaThemeType || (exports.GrafanaThemeType = {}));
+
+var isHex = function (color) {
+    var hexRegex = /^((0x){0,1}|#{0,1})([0-9A-F]{8}|[0-9A-F]{6}|[0-9A-F]{3})$/gi;
+    return hexRegex.test(color);
+};
+
+var getColorFromHexRgbOrName = function (color, theme) {
+    if (color.indexOf('rgb') > -1 || isHex(color)) {
+        return color;
+    }
+    var colorDefinition = getColorByName(color);
+    if (!colorDefinition) {
+        return new tinycolor(color).toHexString();
+    }
+    return theme ? colorDefinition.variants[theme] : colorDefinition.variants.dark;
+};
+
+function getColorFromThreshold(value, thresholds, theme) {
+    var themeType = theme ? theme.type : exports.GrafanaThemeType.Dark;
+    if (thresholds.length === 1) {
+        return getColorFromHexRgbOrName(thresholds[0].color, themeType);
+    }
+    var atThreshold = thresholds.filter(function (threshold) { return value === threshold.value; })[0];
+    if (atThreshold) {
+        return getColorFromHexRgbOrName(atThreshold.color, themeType);
+    }
+    var belowThreshold = thresholds.filter(function (threshold) { return value > threshold.value; });
+    if (belowThreshold.length > 0) {
+        var nearestThreshold = belowThreshold.sort(function (t1, t2) { return t2.value - t1.value; })[0];
+        return getColorFromHexRgbOrName(nearestThreshold.color, themeType);
+    }
+    // Use the first threshold as the default color
+    return getColorFromHexRgbOrName(thresholds[0].color, themeType);
+}
+
+const getLastNonNullRowInRows = rows => {
+  if (rows.length === 0) {
+    return [null, null];
+  }
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (rows[i][0] !== null) {
+      return rows[i];
+    }
+  }
+  return rows[0];
+};
+
+const toLastNonNullRowBySeriesName = data => {
+  let map = {};
+  if (data && data.series) {
+    data.series.forEach(series => {
+      const fields = series.fields;
+      if (!fields || fields.length !== 2) {
+        console.log('toLastNonNullRowByFieldName, unexpected fields length, data=', data);
+      }
+      map[series.name] = getLastNonNullRowInRows(series.rows);
+    });
+  }
+  return map;
+};
+
+const getTrafficValue = (rowsBySeriesName, seriesName) => {
+  const row = rowsBySeriesName[seriesName];
+  return row ? row[0] : undefined;
+};
+
+const formatTrafficLabel = value => {
+  if (value === undefined) {
+    return 'no series';
+  }
+  if (value === null) {
+    return 'no data';
+  }
+  return `${value.toFixed(1)}%`;
+}
+
+const setEmptyJointPosition = (cy, elem) => {
+  const realLinkID = elem.data('realLinkID');
+  const realLink = cy.$('#' + realLinkID);
+  const midpoint = realLink.midpoint();
+  elem.position(midpoint);
+};
+
+    const options = {
+      nodes: [
+        { id: 1, label: 'a', x: 100, y: 0 },
+        { id: 2, label: 'b', x: 0, y: 180 },
+        { id: 3, label: 'c', x: 200, y: 180 }
+      ],
+      links: [
+        { id: 1, sourceID: 1, targetID: 2,
+          forwardSeriesName: 'netdata.primergy.cpu.cpu0.idle',
+          reverseSeriesName: 'netdata.primergy.cpu.cpu0.user'
+        },
+        { id: 2, sourceID: 1, targetID: 3,
+          forwardSeriesName: 'netdata.primergy.cpu.cpu1.idle',
+          reverseSeriesName: 'netdata.primergy.cpu.cpu1.user'
+        }
+      ],
+      displayOptions: {
+        edgeWidth: 18,
+        edgeInterval: 80,
+        // NOTE: This color codes were copied from
+        // https://jfly.uni-koeln.de/colorset/
+        thresholds: [
+          { index: 0, value: -Infinity, color: '#ffffff' },
+          { index: 1, value: 1, color: '#c9ace6' },
+          { index: 2, value: 10, color: '#005aff' },
+          { index: 3, value: 25, color: '#4dc4ff' },
+          { index: 4, value: 40, color: '#03af16' },
+          { index: 5, value: 55, color: '#fff100' },
+          { index: 6, value: 70, color: '#f6aa00' },
+          { index: 7, value: 85, color: '#ff4b00' }
+        ]
+      }
+    };
+
+    const data = {
+      series: [
+        { name: 'netdata.primergy.cpu.cpu0.idle',
+          fields: ['netdata.primergy.cpu.cpu0.idle', 'time'],
+          rows: [[2.4, 0]]
+        },
+        { name: 'netdata.primergy.cpu.cpu0.user',
+          fields: ['netdata.primergy.cpu.cpu0.user', 'time'],
+          rows: [[97.6, 0]]
+        },
+        { name: 'netdata.primergy.cpu.cpu1.idle',
+          fields: ['netdata.primergy.cpu.cpu1.idle', 'time'],
+          rows: [[2.6, 0]]
+        },
+        { name: 'netdata.primergy.cpu.cpu1.user',
+          fields: ['netdata.primergy.cpu.cpu1.user', 'time'],
+          rows: [[97.4, 0]]
+        }
+      ]
+    };
+
+    const { nodes, links, displayOptions } = options;
+    console.log('links', links);
+    const { edgeWidth, edgeInterval, thresholds } = displayOptions;
+    const validLinks = links.filter(link => (link.sourceID && link.targetID));
+    console.log('validLinks', validLinks);
+    const rowsBySeriesName = toLastNonNullRowBySeriesName(data);
+
+    const realNodeElems = nodes.map(node => ({
+      data: { id: `node${node.id}`, label: node.label },
+      position: { x: node.x, y: node.y },
+      classes: 'real-node'
+    }));
+    console.log('realNodeElems', realNodeElems);
+
+    const realLinkElems = validLinks.map(link => ({
+      data: {
+        id: `link${link.id}`,
+        source: `node${link.sourceID}`,
+        target: `node${link.targetID}`
+      },
+      classes: 'real-link'
+    }));
+
+    const emptyJointElems = validLinks.map(link => ({
+      data: {
+        id: `joint${link.id}`,
+        realLinkID: `link${link.id}`
+      },
+      classes: 'empty-joint'
+    }));
+
+    const sourceMidEdgeElems = validLinks.map(link => {
+      const value = getTrafficValue(rowsBySeriesName, link.forwardSeriesName);
+      const color = getColorFromThreshold(value, thresholds);
+
+      return {
+        data: {
+          id: `edge${link.sourceID}-${link.id}`,
+          source: `node${link.sourceID}`,
+          target: `joint${link.id}`,
+          label: formatTrafficLabel(value),
+          lineColor: color
+        },
+        classes: 'edge'
+      };
+    });
+
+    console.log('sourceMidEdgeElems', sourceMidEdgeElems);
+
+    const targetMidEdgeElems = validLinks.map(link => {
+      const value = getTrafficValue(rowsBySeriesName, link.reverseSeriesName);
+      const color = getColorFromThreshold(value, thresholds);
+
+      return {
+        data: {
+          id: `edge${link.targetID}-${link.id}`,
+          source: `node${link.targetID}`,
+          target: `joint${link.id}`,
+          label: formatTrafficLabel(value),
+          lineColor: color
+        },
+        classes: 'edge'
+      };
+    });
+
+    const elems = realNodeElems.concat(realLinkElems, emptyJointElems, sourceMidEdgeElems, targetMidEdgeElems);
+
+    var cy = window.cy = cytoscape({
+      container: document.getElementById('cy'),
+      elements: elems,
+      style: [
+        {
+          selector: '.real-node',
+          style: {
+            'background-color': '#ccc'
+          }
+        },
+        // {
+        //   selector: '.real-node[label]',
+        //   style: {
+        //     'color': '#fff',
+        //     'text-wrap': 'wrap',
+        //     'label': 'data(label)'
+        //   }
+        // },
+        {
+          selector: '.real-link',
+          style: {
+            'opacity': 0,
+            'width': '1px',
+            'height': '1px',
+            'border-width': 0,
+            'control-point-step-size': edgeInterval
+          }
+        },
+        {
+          selector: '.empty-joint',
+          style: {
+            'content': '',
+            'background-opacity': 0,
+            'width': '2px',
+            'height': '2px',
+            'border-width': 0
+          }
+        },
+        {
+          selector: '.edge',
+          style: {
+            'curve-style': 'bezier',
+            'width': `${edgeWidth}px`,
+            'line-color': 'data(lineColor)',
+            'target-arrow-color': 'data(lineColor)',
+            'target-arrow-shape': 'triangle'
+          }
+        },
+        // {
+        //   selector: '.edge[label]',
+        //   style: {
+        //     'label': 'data(label)',
+        //     'text-border-opacity': 1,
+        //     'text-border-color': '#000',
+        //     'text-border-width': '1px',
+        //     'text-background-padding': '4px',
+        //     'text-background-opacity': 1,
+        //     'text-background-color': '#FFF',
+        //     'text-background-shape': 'rectangle'
+        //   }
+        // },
+      ],
+      layout: {
+        name: 'preset'
+      }
+    });
+
+    cy.$('.empty-joint').forEach(elem => {
+      setEmptyJointPosition(cy, elem);
+    });
+
+    cy.$('.real-node').on('position', evt => {
+      let joints = evt.target.neighborhood().filter('.empty-joint');
+      joints.forEach(elem => {
+        setEmptyJointPosition(cy, elem);
+      });
+    });
+
+
+/*
+        var cy = window.cy = cytoscape({
+          container: document.getElementById('cy'),
+
+          style: [
+            {
+              selector: 'node',
+              style: {
+                'content': 'data(name)'
+              }
+            },
+
+            {
+              selector: 'edge',
+              style: {
+                'curve-style': 'bezier',
+                'target-arrow-shape': 'triangle'
+              }
+            }
+          ],
+
+          elements: {
+            nodes: [
+              { data: { id: 'j', name: 'Jerry' } },
+              { data: { id: 'e', name: 'Elaine' } },
+              { data: { id: 'k', name: 'Kramer' } },
+              { data: { id: 'g', name: 'George' } }
+            ],
+            edges: [
+              { data: { source: 'j', target: 'e' } },
+              { data: { source: 'j', target: 'k' } },
+              { data: { source: 'j', target: 'g' } },
+              { data: { source: 'e', target: 'j' } },
+              { data: { source: 'e', target: 'k' } },
+              { data: { source: 'k', target: 'j' } },
+              { data: { source: 'k', target: 'e' } },
+              { data: { source: 'k', target: 'g' } },
+              { data: { source: 'g', target: 'j' } }
+            ]
+          }
+        });
+*/
+
+
+      });
+
+      var saveAsSvg = function(filename) {
+        var svgContent = cy.svg({scale: 1, full: true});
+        var blob = new Blob([svgContent], {type:"image/svg+xml;charset=utf-8"});
+        saveAs(blob, "icn-networktrafficmap-panel.svg");
+      };
+      var getSvgUrl = function() {
+        var svgContent = cy.svg({scale: 1, full: true});
+        var blob = new Blob([svgContent], {type:"image/svg+xml;charset=utf-8"});
+        var url = URL.createObjectURL(blob);
+        return url;
+      };
+    </script>
+  </head>
+
+  <body>
+    <h1>cytoscape-svg demo</h1>
+    <button style="color: white; background-color: #008CBA; width: 100px; height: 30px;" onclick="saveAsSvg()">Save as SVG</button>
+    <button style="color: white; background-color: #ff0000; width: 100px; height: 30px;" onclick="window.location=getSvgUrl()">View SVG</button>
+
+    <div id="cy"></div>
+
+  </body>
+
+</html>
