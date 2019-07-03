@@ -15,6 +15,7 @@
     "logos": {
       "small": "img/icn-networktrafficmap-panel.svg",
       "large": "img/icn-networktrafficmap-panel.svg"
-    }
+    },
+    "version": "0.1.1"
   }
 }
