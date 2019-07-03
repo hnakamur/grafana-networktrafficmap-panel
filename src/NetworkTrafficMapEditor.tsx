@@ -8,11 +8,17 @@ import { DisplayOptionsEditor } from './DisplayOptionsEditor';
 import { NetworkTrafficMapOptions, DisplayOptions, Node, Link } from './types';
 
 export class NetworkTrafficMapEditor extends PureComponent<PanelEditorProps<NetworkTrafficMapOptions>> {
-  onNodesChanged = (nodes: Node[]) =>
+  onNodesChanged = (nodes: Node[]) => {
+    const links = this.props.options.links.filter(link => (
+      nodes.find(node => link.sourceID === node.id) &&
+      nodes.find(node => link.targetID === node.id)
+    ));
     this.props.onOptionsChange({
       ...this.props.options,
+      links,
       nodes
     });
+  };
 
   onLinksChanged = (links: Link[]) =>
     this.props.onOptionsChange({
