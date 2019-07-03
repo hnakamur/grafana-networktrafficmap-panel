@@ -16,6 +16,8 @@ export interface Props {
 }
 
 interface State {
+  nodeWidth: number;
+  nodeHeight: number;
   edgeWidth: number;
   edgeInterval: number;
   thresholds: Threshold[];
@@ -28,7 +30,21 @@ export class DisplayOptionsEditor extends PureComponent<Props, State> {
     this.state = { ...props.options };
   }
 
-  onEdgeWdithChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onNodeWidthChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const parsedValue = parseFloat(event.target.value);
+		if (!isNaN(parsedValue)) {
+			this.setState({ nodeWidth: parsedValue });
+		}
+  };
+
+  onNodeHeightChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const parsedValue = parseFloat(event.target.value);
+		if (!isNaN(parsedValue)) {
+			this.setState({ nodeHeight: parsedValue });
+		}
+  };
+
+  onEdgeWidthChange = (event: ChangeEvent<HTMLInputElement>) => {
     const parsedValue = parseFloat(event.target.value);
 		if (!isNaN(parsedValue)) {
 			this.setState({ edgeWidth: parsedValue });
@@ -52,16 +68,32 @@ export class DisplayOptionsEditor extends PureComponent<Props, State> {
   }
 
   render() {
-    const { edgeWidth, edgeInterval, thresholds } = this.state;
+    const { nodeWidth, nodeHeight, edgeWidth, edgeInterval, thresholds } = this.state;
     return (
       <PanelOptionsGrid>
         <PanelOptionsGroup title="Display">
+          <FormField
+            label="Node width"
+            labelWidth={10}
+            inputWidth={8}
+            onBlur={this.updateDisplayOptions}
+            onChange={this.onNodeWidthChange}
+            value={nodeWidth}
+          />
+          <FormField
+            label="Node height"
+            labelWidth={10}
+            inputWidth={8}
+            onBlur={this.updateDisplayOptions}
+            onChange={this.onNodeHeightChange}
+            value={nodeHeight}
+          />
           <FormField
             label="Edge width"
             labelWidth={10}
             inputWidth={8}
             onBlur={this.updateDisplayOptions}
-            onChange={this.onEdgeWdithChange}
+            onChange={this.onEdgeWidthChange}
             value={edgeWidth}
           />
           <FormField

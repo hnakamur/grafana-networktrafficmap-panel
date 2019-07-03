@@ -79,7 +79,7 @@ export const NetworkTrafficMapPanel: React.FunctionComponent<NetworkTrafficMapPa
   const cyWrapper = useRef(null);
   useEffect(() => {
     const { nodes, links, displayOptions } = options;
-    const { edgeWidth, edgeInterval, thresholds } = displayOptions;
+    const { nodeHeight, nodeWidth, edgeWidth, edgeInterval, thresholds } = displayOptions;
     const validLinks = links.filter(link => (link.sourceID && link.targetID));
     const rowsBySeriesName = toLastNonNullRowBySeriesName(data);
 
@@ -147,15 +147,26 @@ export const NetworkTrafficMapPanel: React.FunctionComponent<NetworkTrafficMapPa
         {
           selector: '.real-node',
           style: {
-            'background-color': '#ccc'
+            'background-color': '#ccc',
+            'height': nodeHeight,
+            'width': nodeWidth
           }
         },
         {
           selector: '.real-node[label]',
           style: {
-            'color': '#fff',
-            'text-wrap': 'wrap',
-            'label': 'data(label)'
+            'color': '#000',
+            'font-weight': 'bold',
+            'label': 'data(label)',
+            'text-background-color': '#fff',
+            'text-background-opacity': 1,
+            'text-background-shape': 'rectangle',
+            'text-border-color': '#000',
+            'text-border-opacity': 1,
+            'text-border-width': '1px',
+            'text-halign': 'center',
+            'text-valign': 'center',
+            'text-wrap': 'wrap'
           }
         },
         {
@@ -198,7 +209,7 @@ export const NetworkTrafficMapPanel: React.FunctionComponent<NetworkTrafficMapPa
             'text-border-width': '1px',
             'text-background-padding': '4px',
             'text-background-opacity': 1,
-            'text-background-color': '#FFF',
+            'text-background-color': '#fff',
             'text-background-shape': 'rectangle'
           }
         },

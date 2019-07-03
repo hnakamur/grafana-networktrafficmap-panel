@@ -23,12 +23,16 @@ export interface Link {
 }
 
 export interface DisplayOptions {
+  nodeWidth: number;
+  nodeHeight: number;
   edgeWidth: number;
   edgeInterval: number;
   thresholds: Threshold[];
 }
 
 export const standardDisplayOptions: DisplayOptions = {
+  nodeWidth: 40,
+  nodeHeight: 40,
   edgeWidth: 10,
   edgeInterval: 80,
   // NOTE: This color codes were copied from
