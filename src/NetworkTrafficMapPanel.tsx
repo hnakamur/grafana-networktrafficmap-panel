@@ -161,6 +161,7 @@ export const NetworkTrafficMapPanel: React.FunctionComponent<NetworkTrafficMapPa
         {
           selector: '.real-link',
           style: {
+            'curve-style': 'bezier',
             'opacity': 0,
             'width': '1px',
             'height': '1px',
