@@ -160,6 +160,7 @@ export const NetworkTrafficMapPanel: React.FunctionComponent<NetworkTrafficMapPa
             'label': 'data(label)',
             'text-background-color': '#fff',
             'text-background-opacity': 1,
+            'text-background-padding': '4px',
             'text-background-shape': 'rectangle',
             'text-border-color': '#000',
             'text-border-opacity': 1,
